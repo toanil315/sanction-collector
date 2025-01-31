@@ -59,7 +59,7 @@ export class DatasetProcessor implements OnModuleDestroy {
 
   private async initBrowser() {
     if (!this.browser) {
-      this.browser = await chromium.launch({ headless: false });
+      this.browser = await chromium.launch({ headless: true });
     }
     return this.browser;
   }

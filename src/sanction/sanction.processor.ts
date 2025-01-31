@@ -48,9 +48,11 @@ export class SanctionProcessor {
         let newlineIndex;
         while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
           const line = buffer.slice(0, newlineIndex);
-          batchSanction.push(
-            this.mapRawValueToSanctionEntity(JSON.parse(line), dataset),
+          const sanctionEntity = this.mapRawValueToSanctionEntity(
+            JSON.parse(line),
+            dataset,
           );
+          batchSanction.push(sanctionEntity);
           if (batchSanction.length === SANCTION_BATCH_SIZE) {
             console.log('start flushing sanctions');
             await this.sanctionRepository.bulkUpsert(batchSanction);
@@ -60,6 +62,12 @@ export class SanctionProcessor {
           buffer = buffer.slice(newlineIndex + 1);
         }
       }
+    }
+
+    if (batchSanction.length) {
+      console.log('start flushing sanctions');
+      await this.sanctionRepository.bulkUpsert(batchSanction);
+      console.log('finish flushing sanctions');
     }
 
     reader.releaseLock();

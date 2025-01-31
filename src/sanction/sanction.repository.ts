@@ -12,23 +12,22 @@ export class SanctionRepository extends Repository<SanctionEntity> {
     const newSanctionMap = sanctions.reduce<
       Record<string, Partial<SanctionEntity>>
     >((acc, curr) => {
-      acc[curr.name] = curr;
+      acc[curr.externalId] = curr;
       return acc;
     }, {});
 
     const existingSanctions = await this.findBy({
-      name: In(Object.keys(newSanctionMap)),
+      externalId: In(Object.keys(newSanctionMap)),
     });
 
     for (let i = 0; i < existingSanctions.length; i++) {
       const existingSanction = existingSanctions[i];
-      if (!newSanctionMap[existingSanction.name]) continue;
 
       existingSanctions[i] = {
         ...existingSanction,
-        ...newSanctionMap[existingSanction.name],
+        ...newSanctionMap[existingSanction.externalId],
       };
-      newSanctionMap[existingSanction.name] = null;
+      newSanctionMap[existingSanction.externalId] = null;
     }
 
     await this.save(existingSanctions);

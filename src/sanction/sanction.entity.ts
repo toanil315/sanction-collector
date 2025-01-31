@@ -18,7 +18,7 @@ export class SanctionEntity {
   @Column()
   schema: string;
 
-  @Column({ unique: true })
+  @Column()
   name: string;
 
   @Column({ name: 'last_change' })
