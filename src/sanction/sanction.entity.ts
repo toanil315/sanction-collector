@@ -2,12 +2,14 @@ import { DatasetEntity } from 'src/dataset/dataset.entity';
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
 @Entity('sanctions')
+@Index('sanction_name_text_search_idx', { synchronize: false })
 export class SanctionEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -20,6 +22,9 @@ export class SanctionEntity {
 
   @Column()
   name: string;
+
+  @Column({ name: 'name_text_search', nullable: true, type: 'tsvector' })
+  nameTextSearch: string | null;
 
   @Column({ name: 'last_change' })
   lastChange: string;

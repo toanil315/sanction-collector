@@ -6,6 +6,7 @@ import { BullModule } from '@nestjs/bull';
 import { SanctionController } from './sanction.controller';
 import { SanctionProcessor } from './sanction.processor';
 import { SanctionRepository } from './sanction.repository';
+import { SanctionEntitySubscriber } from './sanction.entity.subscriber';
 
 @Module({
   imports: [
@@ -16,6 +17,6 @@ import { SanctionRepository } from './sanction.repository';
     DatasetModule,
   ],
   controllers: [SanctionController],
-  providers: [SanctionProcessor, SanctionRepository],
+  providers: [SanctionProcessor, SanctionRepository, SanctionEntitySubscriber],
 })
 export class SanctionModule {}
