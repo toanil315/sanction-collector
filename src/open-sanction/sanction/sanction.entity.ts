@@ -1,4 +1,3 @@
-import { DatasetEntity } from 'src/dataset/dataset.entity';
 import {
   Column,
   Entity,
@@ -7,6 +6,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { DatasetEntity } from '../dataset/dataset.entity';
 
 @Entity('sanctions')
 @Index('sanction_name_text_search_idx', { synchronize: false })

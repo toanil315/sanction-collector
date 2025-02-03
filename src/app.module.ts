@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
-import { DatasetModule } from './dataset/dataset.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
-import { SanctionModule } from './sanction/sanction.module';
+import { DatasetModule } from './open-sanction/dataset/dataset.module';
+import { SanctionModule } from './open-sanction/sanction/sanction.module';
+import { EuSanctionModule } from './eu-sanction-tracker/eu-sanction.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { SanctionModule } from './sanction/sanction.module';
     }),
     DatasetModule,
     SanctionModule,
+    EuSanctionModule,
   ],
   controllers: [],
   providers: [],

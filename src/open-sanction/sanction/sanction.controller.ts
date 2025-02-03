@@ -2,7 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 
-@Controller('sanctions')
+@Controller('open-sanction/sanctions')
 export class SanctionController {
   constructor(
     @InjectQueue('sanction-queue') private readonly sanctionQueue: Queue,

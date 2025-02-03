@@ -3,7 +3,7 @@ import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { DatasetService } from './dataset.service';
 
-@Controller('datasets')
+@Controller('open-sanction/datasets')
 export class DatasetController {
   constructor(
     @InjectQueue('dataset-queue') private readonly datasetQueue: Queue,

@@ -1,5 +1,5 @@
-import { SanctionEntity } from 'src/sanction/sanction.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { SanctionEntity } from '../sanction/sanction.entity';
 
 @Entity('datasets')
 export class DatasetEntity {

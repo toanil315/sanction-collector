@@ -1,11 +1,11 @@
 import { Processor, Process } from '@nestjs/bull';
 import { Job } from 'bull';
 import { Injectable } from '@nestjs/common';
-import { DatasetService } from 'src/dataset/dataset.service';
 import { SanctionRepository } from './sanction.repository';
-import { DatasetEntity } from 'src/dataset/dataset.entity';
 import { SanctionEntity } from './sanction.entity';
 import { SANCTION_BATCH_SIZE } from './sanction.constant';
+import { DatasetService } from '../dataset/dataset.service';
+import { DatasetEntity } from '../dataset/dataset.entity';
 
 @Injectable()
 @Processor('sanction-queue')

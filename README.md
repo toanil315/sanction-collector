@@ -15,6 +15,12 @@ USING GIN ("name_text_search");
 ```
 
 ```
+CREATE INDEX "eu_sanction_name_text_search_idx"
+ON public.eu_sanctions
+USING GIN ("name_text_search");
+```
+
+```
 UPDATE public.sanctions s
 SET name_text_search = setweight(to_tsvector(coalesce(s."name" , '')), 'A');
 ```
@@ -23,18 +29,22 @@ SET name_text_search = setweight(to_tsvector(coalesce(s."name" , '')), 'A');
 select * from public.sanctions s where s.name_text_search @@ plainto_tsquery('COMPANY ODK-KUZNETSOV')
 ```
 
-## Usage:
+## Open Sanction Usage:
 
-First: Use GET `datasets/sync` to synchronize datasets into db
+First: Use GET `/open-sanction/datasets/sync` to synchronize datasets into db
 
-Second: use GET `sanctions/sync` to synchronize sanctions into db
+Second: use GET `/open-sanction/sanctions/sync` to synchronize sanctions into db
 
 ## Data:
 
-### Sanctions:
+### EU Sanctions:
+
+![Sanctions](./public/eu-sanction.png)
+
+### Opens Sanctions:
 
 ![Sanctions](./public/sanction-data.png)
 
-### Datasets:
+### Open Sanction Datasets:
 
 ![Datasets](./public/dataset-data.png)
