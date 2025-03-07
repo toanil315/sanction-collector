@@ -4,14 +4,15 @@ import { BullModule } from '@nestjs/bull';
 import { DatasetModule } from './open-sanction/dataset/dataset.module';
 import { SanctionModule } from './open-sanction/sanction/sanction.module';
 import { EuSanctionModule } from './eu-sanction-tracker/eu-sanction.module';
+import { OfacSanctionModule } from './ofac-saction/ofac-sanction.module';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'postgres',
-      database: 'demo',
-      host: 'localhost',
-      port: 5432,
+      database: 'postgres',
+      host: '127.0.0.1',
+      port: 5433,
       username: 'postgres',
       password: 'postgres',
       synchronize: true,
@@ -27,6 +28,7 @@ import { EuSanctionModule } from './eu-sanction-tracker/eu-sanction.module';
     DatasetModule,
     SanctionModule,
     EuSanctionModule,
+    OfacSanctionModule,
   ],
   controllers: [],
   providers: [],

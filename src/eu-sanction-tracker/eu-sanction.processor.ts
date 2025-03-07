@@ -1,5 +1,4 @@
 import { Processor, Process } from '@nestjs/bull';
-import { Job } from 'bull';
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { Browser, chromium, Page } from 'playwright';
 import {
@@ -25,7 +24,7 @@ export class EuSanctionProcessor implements OnModuleDestroy {
   }
 
   @Process('sync-sanction')
-  async synchronizeDataset(job: Job<void>) {
+  async synchronizeDataset() {
     console.log('start sync eu sanctions');
     await this.initBrowser();
     await this.syncSanctions(EU_SANCTION_ENTITIES_URL, 'entity');
@@ -71,7 +70,7 @@ export class EuSanctionProcessor implements OnModuleDestroy {
         flushBatch = [];
       }
 
-      let hasNextPage = await this.hasNextPage(page);
+      const hasNextPage = await this.hasNextPage(page);
       if (hasNextPage) {
         await page.click(GRID_NEXT_ACTION_LOCATOR);
       } else {
