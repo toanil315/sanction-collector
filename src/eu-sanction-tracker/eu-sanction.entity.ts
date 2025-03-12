@@ -77,16 +77,37 @@ enum EuSanctionEntitySchema {
 export class EuSanctionMapEntity {
   id: string;
   name: string[];
-  topic = ['sanction'];
   schema: string;
   imoNumber = '';
   mmsi = '';
   address: string[] = [];
+  notes: string;
+  sanction: {
+    id: string;
+    caption: string;
+    schema: string;
+    authority: string;
+    summary: string;
+    address: string[];
+    reasons: string;
+  } = {
+    id: '',
+    caption: '',
+    schema: '',
+    authority: '',
+    address: [],
+    summary: '',
+    reasons: '',
+  };
 
-  constructor(member: Member, address: string) {
+  constructor(member: Member, regimeData: RegimeData) {
     this.id = this.generateHash(`${member.name}-${member.creation_date}`);
-    this.name = member.name.split(', ');
+    this.name = member.name
+      .split(',')
+      .map((str) => str.trim())
+      .filter(Boolean);
     this.schema = this.getEntitySchema(member);
+    this.address.push(regimeData.country.data.title);
 
     if (this.schema === 'Vessel') {
       const [imoNumber, mmsi] = this.getImoAndMmsiNumberOfVessel(member);
@@ -95,12 +116,22 @@ export class EuSanctionMapEntity {
       this.mmsi = mmsi;
     }
 
-    this.address.push(address);
+    if (this.schema !== 'Vessel') {
+      this.notes = member.id_code;
+    }
+
+    this.sanction.id = this.generateHash('sanction' + this.id);
+    this.sanction.caption = 'Sanction';
+    this.sanction.schema = 'Sanction';
+    this.sanction.authority = regimeData.adopted_by.data.title;
+    this.sanction.summary = regimeData.specification;
+    this.sanction.reasons = member.reason;
+    this.sanction.address = this.address;
   }
 
-  generateHash(id: string): string {
+  private generateHash(id: string): string {
     return createHash('sha256') // Choose hash algorithm (e.g., 'sha256', 'md5', etc.)
-      .update(id)
+      .update(`eu-sanction-map` + id)
       .digest('hex');
   }
 
@@ -108,7 +139,7 @@ export class EuSanctionMapEntity {
     let schema = EuSanctionEntitySchema[member.type];
     const idCode = member.id_code;
 
-    if (idCode?.includes('IMO') || idCode === '8405311') {
+    if (idCode?.includes('IMO:') || idCode === '8405311') {
       schema = 'Vessel';
     }
     return schema;

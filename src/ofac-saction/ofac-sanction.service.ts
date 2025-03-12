@@ -11,14 +11,14 @@ import {
   RawOfacSanctionItem,
   RawOfacSanctionResponse,
 } from './ofac-sanction.entity';
-import { existsSync, unlinkSync, writeFileSync } from 'fs';
-import { OfacSanctionProcessor } from './ofac-ftm-sanction.mapping';
+import { existsSync, unlinkSync } from 'fs';
+import { OfacSanctionDataTransformerFileSaver } from './ofac-sanction-mapper-and-saver';
 
 @Injectable()
 export class OfacSanctionService {
   private BASE_END_POINT = 'https://sanctionslistservice.ofac.treas.gov';
 
-  constructor(private ofacSanctionProcessor: OfacSanctionProcessor) {}
+  constructor(private ofacMapper: OfacSanctionDataTransformerFileSaver) {}
 
   async getEntities() {
     const responses = await Promise.allSettled([
@@ -42,7 +42,7 @@ export class OfacSanctionService {
         }
         console.log(`Start writing into file for ${list} and ${program}`);
         for (const entity of entities) {
-          await this.ofacSanctionProcessor.mapAndSaveOfacSanctionToFTM(entity);
+          await this.ofacMapper.mapAndSaveOfacSanctionToFTM(entity);
         }
         console.log(`Finish writing into file for ${list} and ${program}`);
       }
@@ -77,7 +77,9 @@ export class OfacSanctionService {
       );
     } catch (error) {
       console.log(error);
+      console.log(`Fetch data for ${list} ${program} FAILED!!!`);
       if (retry) {
+        console.log(`Start refetching ${list} ${program}`);
         return this.getEntitiesBasedOnListAndProgram(list, program, false);
       }
       return null;

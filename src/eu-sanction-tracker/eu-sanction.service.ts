@@ -4,11 +4,18 @@ import {
   RegimeData,
   RegimeItem,
 } from './eu-sanction.entity';
+import { EuSanctionDataTransformerFileSaver } from './eu-sanction.mapper';
+import { Injectable } from '@nestjs/common';
 
 // Refer: https://github.com/opensanctions/opensanctions/blob/main/datasets/eu/sanctions_map/crawler.py
+@Injectable()
 export class EuSanctionMapService {
   DATA_URL = 'https://www.sanctionsmap.eu/api/v1/data?';
   REGIME_URL = 'https://www.sanctionsmap.eu/api/v1/regime';
+
+  constructor(
+    private euSanctionDataTransformerFileSaver: EuSanctionDataTransformerFileSaver,
+  ) {}
 
   async crawData() {
     console.log('Start crawling eu sanctions');
@@ -16,8 +23,6 @@ export class EuSanctionMapService {
       const regime = await this.fetchJson<{ data: RegimeItem[] }>(
         this.REGIME_URL,
       );
-
-      const sanctionsList: EuSanctionMapEntity[] = [];
 
       for (const item of regime.data) {
         const regimeUrl = `${this.REGIME_URL}/${item.id}`;
@@ -31,17 +36,17 @@ export class EuSanctionMapService {
             for (const member of measureList.members.data) {
               const sanctionEntity = new EuSanctionMapEntity(
                 member.data || member,
-                regimeData.data.country.data.title,
+                regimeData.data,
               );
-              sanctionsList.push(sanctionEntity);
+              await this.euSanctionDataTransformerFileSaver.mapAndSaveEUSanctionToFTM(
+                sanctionEntity,
+              );
             }
           }
         }
       }
 
-      // Write to file
-      this.writeToFile('sanctions_list.json', sanctionsList);
-      console.log('Sanctions data saved to sanctions_list.json');
+      console.log('Sanctions data saved !!!');
     } catch (error) {
       console.error('Error:', error);
     }

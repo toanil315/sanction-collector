@@ -8,8 +8,8 @@ import { access, appendFile, constants, writeFile } from 'fs/promises';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
-export class OfacSanctionProcessor {
-  private filePath = './ofac-entities.ftm.json';
+export class OfacSanctionDataTransformerFileSaver {
+  private filePath = './ofac/entities.ftm.json';
 
   static IDENTIFICATION_DOCUMENT_TYPES = [
     'Travel Document Number',
@@ -211,6 +211,7 @@ export class OfacSanctionProcessor {
       properties: {
         ...this.getVesselProperties(sanction),
       },
+      datasets: sanction.sanctionsLists,
     };
     await this.saveEntityToFile(vesselFTM);
     return vesselFTM;
@@ -221,7 +222,11 @@ export class OfacSanctionProcessor {
 
     const addressFTMs = [];
     for (const addr of sanction.addresses) {
-      const addrFTM = await this.mapAndSaveAddressFTM(addr, generalInfo.id);
+      const addrFTM = await this.mapAndSaveAddressFTM(
+        addr,
+        generalInfo.id,
+        sanction.sanctionsLists,
+      );
       if (!addrFTM) continue;
       addressFTMs.push(addrFTM);
     }
@@ -234,6 +239,7 @@ export class OfacSanctionProcessor {
         ...this.getOrganizationProperties(sanction),
         addressEntity: addressFTMs.map((addr) => addr.id),
       },
+      datasets: sanction.sanctionsLists,
     };
     await this.saveEntityToFile(organizationFTM);
     return organizationFTM;
@@ -243,25 +249,38 @@ export class OfacSanctionProcessor {
     const generalInfo = this.getGeneralInfo(sanction);
 
     for (const doc of sanction.identityDocuments.filter((doc) =>
-      OfacSanctionProcessor.PASSPORT_DOCUMENT_TYPES.includes(doc.type),
+      OfacSanctionDataTransformerFileSaver.PASSPORT_DOCUMENT_TYPES.includes(
+        doc.type,
+      ),
     )) {
-      await this.mapAndSavePassportFTM(doc, generalInfo.id);
+      await this.mapAndSavePassportFTM(
+        doc,
+        generalInfo.id,
+        sanction.sanctionsLists,
+      );
     }
 
     const addressFTMs = [];
     for (const addr of sanction.addresses) {
-      const addrFTM = await this.mapAndSaveAddressFTM(addr, generalInfo.id);
+      const addrFTM = await this.mapAndSaveAddressFTM(
+        addr,
+        generalInfo.id,
+        sanction.sanctionsLists,
+      );
       if (!addrFTM) continue;
       addressFTMs.push(addrFTM);
     }
 
     const identificationFTMs = [];
     for (const doc of sanction.identityDocuments.filter((doc) =>
-      OfacSanctionProcessor.IDENTIFICATION_DOCUMENT_TYPES.includes(doc.type),
+      OfacSanctionDataTransformerFileSaver.IDENTIFICATION_DOCUMENT_TYPES.includes(
+        doc.type,
+      ),
     )) {
       const identificationFTM = await this.mapAndSaveIdentificationFTM(
         doc,
         generalInfo.id,
+        sanction.sanctionsLists,
       );
       if (!identificationFTM) continue;
       identificationFTMs.push(identificationFTM);
@@ -275,6 +294,7 @@ export class OfacSanctionProcessor {
         ...this.getPersonProperties(sanction),
         addressEntity: addressFTMs.map((addr) => addr.id),
       },
+      datasets: sanction.sanctionsLists,
     };
     await this.saveEntityToFile(personFTM);
     return personFTM;
@@ -283,6 +303,7 @@ export class OfacSanctionProcessor {
   private async mapAndSavePassportFTM(
     document: IdentityDocument,
     holderId: string,
+    sanctionLists: string[],
   ) {
     if (!document || !holderId) return;
     const passportFTM = {
@@ -295,12 +316,17 @@ export class OfacSanctionProcessor {
         holder: [holderId],
         country: [document.issuingCountry],
       },
+      datasets: sanctionLists,
     };
     await this.saveEntityToFile(passportFTM);
     return passportFTM;
   }
 
-  private async mapAndSaveAddressFTM(address: Address, personId: string) {
+  private async mapAndSaveAddressFTM(
+    address: Address,
+    personId: string,
+    sanctionLists: string[],
+  ) {
     if (!address.country && !address.addressParts.length) return;
     const caption = `${address.country}, ${address.addressParts.map((part) => part.value).join(',')}`;
     const addrFTM = {
@@ -314,6 +340,7 @@ export class OfacSanctionProcessor {
           address.addressParts.find((part) => part.type === 'CITY')?.value,
         ],
       },
+      datasets: sanctionLists,
     };
     await this.saveEntityToFile(addrFTM);
     return addrFTM;
@@ -322,6 +349,7 @@ export class OfacSanctionProcessor {
   private async mapAndSaveIdentificationFTM(
     doc: IdentityDocument,
     holderId: string,
+    sanctionLists: string[],
   ) {
     if (!doc || !holderId) return;
     const identificationFTM = {
@@ -334,6 +362,7 @@ export class OfacSanctionProcessor {
         country: [doc.issuingCountry],
         type: [doc.type],
       },
+      datasets: sanctionLists,
     };
     await this.saveEntityToFile(identificationFTM);
     return identificationFTM;
@@ -341,11 +370,11 @@ export class OfacSanctionProcessor {
 
   private async mapAndSaveSanctionFTM(
     sanction: OfacSanctionedEntity,
-    personId: string,
+    entityId: string,
   ) {
     const sanctionFTM = {
       id: this.genHash(
-        personId +
+        entityId +
           sanction.sanctionsLists.join() +
           sanction.sanctionsProgram.join(),
       ),
@@ -353,9 +382,10 @@ export class OfacSanctionProcessor {
       schema: 'Sanction',
       properties: {
         program: sanction.sanctionsProgram,
-        entity: [personId],
+        entity: [entityId],
         authority: [sanction.legalAuthorities],
       },
+      datasets: sanction.sanctionsLists,
     };
     await this.saveEntityToFile(sanctionFTM);
     return sanctionFTM;
@@ -382,7 +412,8 @@ export class OfacSanctionProcessor {
   private getGeneralInfo(sanction: OfacSanctionedEntity) {
     const id = this.genHash(sanction.names.join());
     const caption = sanction.names[0];
-    const schema = OfacSanctionProcessor.SCHEMA_TYPES[sanction.entityType];
+    const schema =
+      OfacSanctionDataTransformerFileSaver.SCHEMA_TYPES[sanction.entityType];
     return { id, caption, schema };
   }
 
@@ -445,7 +476,9 @@ export class OfacSanctionProcessor {
 
   private getPassportNumber(sanction: OfacSanctionedEntity) {
     const passportDocs = sanction.identityDocuments.filter((doc) =>
-      OfacSanctionProcessor.PASSPORT_DOCUMENT_TYPES.includes(doc.type),
+      OfacSanctionDataTransformerFileSaver.PASSPORT_DOCUMENT_TYPES.includes(
+        doc.type,
+      ),
     );
     if (passportDocs.length) {
       return [passportDocs.map((doc) => doc.documentNumber)];
@@ -493,7 +526,9 @@ export class OfacSanctionProcessor {
 
   private getRegistrationNumber(sanction: OfacSanctionedEntity) {
     const registrationDocs = sanction.identityDocuments.filter((doc) =>
-      OfacSanctionProcessor.REGISTRATION_DOCUMENT_TYPES.includes(doc.type),
+      OfacSanctionDataTransformerFileSaver.REGISTRATION_DOCUMENT_TYPES.includes(
+        doc.type,
+      ),
     );
     if (registrationDocs.length) {
       return [registrationDocs.map((doc) => doc.documentNumber)];
@@ -504,7 +539,9 @@ export class OfacSanctionProcessor {
 
   private getIdNumber(sanction: OfacSanctionedEntity) {
     const idDocs = sanction.identityDocuments.filter((doc) =>
-      OfacSanctionProcessor.ID_NUMBER_DOCUMENT_TYPES.includes(doc.type),
+      OfacSanctionDataTransformerFileSaver.ID_NUMBER_DOCUMENT_TYPES.includes(
+        doc.type,
+      ),
     );
     if (idDocs.length) {
       return [idDocs.map((doc) => doc.documentNumber)];
@@ -515,7 +552,9 @@ export class OfacSanctionProcessor {
 
   private getTaxNumber(sanction: OfacSanctionedEntity) {
     const taxNumberDocs = sanction.identityDocuments.filter((doc) =>
-      OfacSanctionProcessor.TAX_NUMBER_DOCUMENT_TYPES.includes(doc.type),
+      OfacSanctionDataTransformerFileSaver.TAX_NUMBER_DOCUMENT_TYPES.includes(
+        doc.type,
+      ),
     );
     if (taxNumberDocs.length) {
       return [taxNumberDocs.map((doc) => doc.documentNumber)];

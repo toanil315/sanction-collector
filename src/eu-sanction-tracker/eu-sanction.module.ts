@@ -7,6 +7,7 @@ import { EuSanctionRepository } from './eu-sanction.repository';
 import { EuSanctionEntitySubscriber } from './sanction.entity.subscriber';
 import { EuSanctionEntity } from './eu-sanction.entity';
 import { EuSanctionMapService } from './eu-sanction.service';
+import { EuSanctionDataTransformerFileSaver } from './eu-sanction.mapper';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { EuSanctionMapService } from './eu-sanction.service';
     EuSanctionRepository,
     EuSanctionEntitySubscriber,
     EuSanctionMapService,
+    EuSanctionDataTransformerFileSaver,
   ],
 })
 export class EuSanctionModule {}

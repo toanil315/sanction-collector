@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { OfacSanctionService } from './ofac-sanction.service';
 import { OfacSanctionController } from './ofac-sanction.controller';
-import { OfacSanctionProcessor } from './ofac-ftm-sanction.mapping';
+import { OfacSanctionDataTransformerFileSaver } from './ofac-sanction-mapper-and-saver';
 
 @Module({
   imports: [],
   controllers: [OfacSanctionController],
-  providers: [OfacSanctionService, OfacSanctionProcessor],
+  providers: [OfacSanctionService, OfacSanctionDataTransformerFileSaver],
 })
 export class OfacSanctionModule {}
