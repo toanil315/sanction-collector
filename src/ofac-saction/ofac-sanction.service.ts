@@ -2,19 +2,23 @@ import { Injectable } from '@nestjs/common';
 import { xml2js } from 'xml-js';
 import get from 'lodash/get';
 import {
-  Address,
-  AddressPart,
-  Feature,
-  IdentityDocument,
-  Name,
-  OfacSanctionItem,
-  OfacSanctionResponse,
+  OfacSanctionedEntity,
+  RawAddress,
+  RawAddressPart,
+  RawFeature,
+  RawIdentityDocument,
+  RawName,
+  RawOfacSanctionItem,
+  RawOfacSanctionResponse,
 } from './ofac-sanction.entity';
 import { existsSync, unlinkSync, writeFileSync } from 'fs';
+import { OfacSanctionProcessor } from './ofac-ftm-sanction.mapping';
 
 @Injectable()
 export class OfacSanctionService {
   private BASE_END_POINT = 'https://sanctionslistservice.ofac.treas.gov';
+
+  constructor(private ofacSanctionProcessor: OfacSanctionProcessor) {}
 
   async getEntities() {
     const responses = await Promise.allSettled([
@@ -28,40 +32,56 @@ export class OfacSanctionService {
 
     for (const list of lists.value) {
       for (const program of programs.value) {
-        const filePath = `./${list.replaceAll(' ', '')}-${program}.json`;
-        this.dropFileIfExist(filePath);
         const entities = await this.getEntitiesBasedOnListAndProgram(
           list,
           program,
         );
-        console.log('Start writing ', filePath);
-        writeFileSync(filePath, JSON.stringify(entities, null, 2), 'utf8');
-        console.log('Finish writing ', filePath);
+        if (!entities) {
+          console.log(`Proceed for ${list} and ${program} failed`);
+          return;
+        }
+        console.log(`Start writing into file for ${list} and ${program}`);
+        for (const entity of entities) {
+          await this.ofacSanctionProcessor.mapAndSaveOfacSanctionToFTM(entity);
+        }
+        console.log(`Finish writing into file for ${list} and ${program}`);
       }
     }
   }
 
-  async getEntitiesBasedOnListAndProgram(list: string, program: string) {
-    const response = await fetch(
-      `${this.BASE_END_POINT}/entities?list=${list}&program=${program}`,
-    );
-    if (!response.ok) return [];
-    const xmlEntities = await response.text();
-    const entities = xml2js(xmlEntities, {
-      compact: true,
-    }) as OfacSanctionResponse;
+  async getEntitiesBasedOnListAndProgram(
+    list: string,
+    program: string,
+    retry = true,
+  ): Promise<OfacSanctionedEntity[] | null> {
+    try {
+      const response = await fetch(
+        `${this.BASE_END_POINT}/entities?list=${list}&program=${program}`,
+      );
+      if (!response.ok) return [];
+      const xmlEntities = await response.text();
+      const entities = xml2js(xmlEntities, {
+        compact: true,
+      }) as RawOfacSanctionResponse;
 
-    if (
-      !entities.sanctionsData.entities ||
-      !entities.sanctionsData.entities.entity ||
-      !entities.sanctionsData.entities.entity.length
-    ) {
-      return [];
+      if (
+        !entities.sanctionsData.entities ||
+        !entities.sanctionsData.entities.entity ||
+        !entities.sanctionsData.entities.entity.length
+      ) {
+        return [];
+      }
+
+      return entities.sanctionsData.entities.entity.map(
+        this.mapOfacSanctionFromXmlToObject.bind(this),
+      );
+    } catch (error) {
+      console.log(error);
+      if (retry) {
+        return this.getEntitiesBasedOnListAndProgram(list, program, false);
+      }
+      return null;
     }
-
-    return entities.sanctionsData.entities.entity.map(
-      this.mapOfacSanctionFromXmlToObject.bind(this),
-    );
   }
 
   private async getSanctionLists(): Promise<string[]> {
@@ -76,7 +96,7 @@ export class OfacSanctionService {
     return response.json();
   }
 
-  private mapOfacSanctionFromXmlToObject(e: OfacSanctionItem) {
+  private mapOfacSanctionFromXmlToObject(e: RawOfacSanctionItem) {
     return {
       identityId: e.generalInfo.identityId._text,
       entityType: e.generalInfo.entityType._text,
@@ -100,7 +120,7 @@ export class OfacSanctionService {
         e.names.name,
         null,
         this.getName.bind(this),
-      ),
+      ).flat(),
       addresses: this.extractDataFromXmlField(
         e.addresses.address,
         null,
@@ -132,14 +152,14 @@ export class OfacSanctionService {
     return [getFn(field, path)];
   }
 
-  private getName(e: Name) {
+  private getName(e: RawName) {
     return this.extractDataFromXmlField(
       e.translations.translation,
       'formattedFullName._text',
     );
   }
 
-  private getAddress(e: Address) {
+  private getAddress(e: RawAddress) {
     return {
       country: e.country?._text,
       addressParts: e.translations?.translation.addressParts
@@ -152,14 +172,14 @@ export class OfacSanctionService {
     };
   }
 
-  private getAddressPart(e: AddressPart) {
+  private getAddressPart(e: RawAddressPart) {
     return {
       type: e?.type._text,
       value: e?.value._text,
     };
   }
 
-  private getIdentityDocument(e: IdentityDocument) {
+  private getIdentityDocument(e: RawIdentityDocument) {
     return {
       type: e?.type?._text,
       name: e?.name?._text,
@@ -169,7 +189,7 @@ export class OfacSanctionService {
     };
   }
 
-  private getFeature(e: Feature) {
+  private getFeature(e: RawFeature) {
     return {
       type: e?.type?._text,
       versionId: e?.versionId?._text,

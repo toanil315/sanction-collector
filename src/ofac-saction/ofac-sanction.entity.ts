@@ -1,12 +1,12 @@
-export interface OfacSanctionResponse {
+export interface RawOfacSanctionResponse {
   sanctionsData: {
     entities: {
-      entity: OfacSanctionItem[];
+      entity: RawOfacSanctionItem[];
     };
   };
 }
 
-export interface OfacSanctionItem {
+export interface RawOfacSanctionItem {
   _attributes: {
     id: string;
   };
@@ -59,7 +59,7 @@ export interface OfacSanctionItem {
     };
   };
   names: {
-    name: Name[];
+    name: RawName[];
   };
   addresses: {
     address: Address[];
@@ -72,7 +72,7 @@ export interface OfacSanctionItem {
   };
 }
 
-export interface Name {
+export interface RawName {
   _attributes: {
     id: string;
   };
@@ -89,11 +89,11 @@ export interface Name {
     _text: string;
   };
   translations: {
-    translation: Translation | Translation[];
+    translation: RawTranslation | RawTranslation[];
   };
 }
 
-export interface Translation {
+export interface RawTranslation {
   _attributes: {
     id: string;
   };
@@ -113,11 +113,11 @@ export interface Translation {
     _text: string;
   };
   nameParts: {
-    namePart: NamePart;
+    namePart: RawNamePart;
   };
 }
 
-export interface NamePart {
+export interface RawNamePart {
   _attributes: {
     id: string;
   };
@@ -132,7 +132,7 @@ export interface NamePart {
   };
 }
 
-export interface Address {
+export interface RawAddress {
   _attributes: {
     id: string;
   };
@@ -163,7 +163,7 @@ export interface Address {
   };
 }
 
-export interface AddressPart {
+export interface RawAddressPart {
   _attributes: {
     id: string;
   };
@@ -178,7 +178,7 @@ export interface AddressPart {
   };
 }
 
-export interface IdentityDocument {
+export interface RawIdentityDocument {
   _attributes: {
     id: string;
   };
@@ -209,7 +209,7 @@ export interface IdentityDocument {
   };
 }
 
-export interface Feature {
+export interface RawFeature {
   _attributes: {
     id: string;
   };
@@ -237,4 +237,43 @@ export interface Feature {
     };
     _text: string;
   };
+}
+
+interface AddressPart {
+  type: string;
+  value: string;
+}
+
+export interface Address {
+  country: string;
+  addressParts: AddressPart[];
+}
+
+export interface IdentityDocument {
+  type: string;
+  name: string;
+  documentNumber: string;
+  isValid: boolean;
+  issuingCountry: string;
+}
+
+export interface Feature {
+  type: string;
+  versionId: string;
+  value: string;
+  isPrimary: boolean;
+  reliability?: string;
+}
+
+export interface OfacSanctionedEntity {
+  identityId: string;
+  entityType: string;
+  sanctionsLists: string[];
+  sanctionsProgram: string[];
+  sanctionsType: string[];
+  legalAuthorities: string[];
+  names: string[];
+  addresses: Address[];
+  identityDocuments: IdentityDocument[];
+  features: Feature[];
 }
