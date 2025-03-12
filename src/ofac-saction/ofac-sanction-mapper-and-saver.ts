@@ -383,7 +383,7 @@ export class OfacSanctionDataTransformerFileSaver {
       properties: {
         program: sanction.sanctionsProgram,
         entity: [entityId],
-        authority: [sanction.legalAuthorities],
+        authority: sanction.legalAuthorities,
       },
       datasets: sanction.sanctionsLists,
     };
@@ -392,7 +392,14 @@ export class OfacSanctionDataTransformerFileSaver {
   }
 
   private async saveEntityToFile(obj: Record<string, any>) {
-    const jsonLine = JSON.stringify(obj) + '\n';
+    const nonEmptyFieldObj = this.removeEmptyValues({
+      id: obj.id,
+      caption: obj.caption,
+      schema: obj.schema,
+      datasets: obj.datasets,
+      properties: this.removeEmptyValues(obj.properties),
+    });
+    const jsonLine = JSON.stringify(nonEmptyFieldObj) + '\n';
 
     try {
       await access(this.filePath, constants.F_OK);
@@ -401,6 +408,22 @@ export class OfacSanctionDataTransformerFileSaver {
     }
 
     await appendFile(this.filePath, jsonLine, 'utf8');
+  }
+
+  removeEmptyValues(obj: Record<string, any>) {
+    return Object.fromEntries(
+      Object.entries(obj)
+        .map(([key, value]) => {
+          if (Array.isArray(value)) {
+            value = value.filter(Boolean);
+          }
+          return [key, value];
+        })
+        .filter(([_, value]) => {
+          if (Array.isArray(value)) return value.length > 0;
+          return value !== undefined && value !== null;
+        }),
+    );
   }
 
   private genHash(name: string) {
@@ -443,13 +466,11 @@ export class OfacSanctionDataTransformerFileSaver {
   }
 
   private getCountry(sanction: OfacSanctionedEntity) {
-    const countries = sanction.addresses.filter((address) => address.country);
+    const countries = sanction.addresses.filter((address) =>
+      Boolean(address.country),
+    );
     if (countries.length) {
-      return [
-        sanction.addresses
-          .filter((address) => address.country)
-          .map((addr) => addr.country),
-      ];
+      return countries.map((c) => c.country);
     }
     return [];
   }
@@ -481,7 +502,7 @@ export class OfacSanctionDataTransformerFileSaver {
       ),
     );
     if (passportDocs.length) {
-      return [passportDocs.map((doc) => doc.documentNumber)];
+      return passportDocs.map((doc) => doc.documentNumber);
     }
 
     return [];
@@ -531,7 +552,7 @@ export class OfacSanctionDataTransformerFileSaver {
       ),
     );
     if (registrationDocs.length) {
-      return [registrationDocs.map((doc) => doc.documentNumber)];
+      return registrationDocs.map((doc) => doc.documentNumber);
     }
 
     return [];
@@ -544,7 +565,7 @@ export class OfacSanctionDataTransformerFileSaver {
       ),
     );
     if (idDocs.length) {
-      return [idDocs.map((doc) => doc.documentNumber)];
+      return idDocs.map((doc) => doc.documentNumber);
     }
 
     return [];
@@ -557,7 +578,7 @@ export class OfacSanctionDataTransformerFileSaver {
       ),
     );
     if (taxNumberDocs.length) {
-      return [taxNumberDocs.map((doc) => doc.documentNumber)];
+      return taxNumberDocs.map((doc) => doc.documentNumber);
     }
 
     return [];
@@ -592,7 +613,7 @@ export class OfacSanctionDataTransformerFileSaver {
       (doc) => doc.type === 'MMSI',
     );
     if (mmsiNumber) {
-      return [mmsiNumber];
+      return [mmsiNumber.documentNumber];
     }
     return [];
   }
